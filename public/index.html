@@ -1,32 +1,25 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    
-    <!-- Основные мета-теги -->
-    <meta name="description" content="Простой веб-чат с мостом в Telegram">
-    <meta name="format-detection" content="telephone=no">
-    <meta name="msapplication-tap-highlight" content="no">
-    
-    <!-- Мобильные настройки -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     
     <title>Веб-чат</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" type="text/css" href="style.css" />
     
-    <!-- Детекция старых браузеров -->
-    <script>
-        // Простая детекция для добавления классов
-        (function() {
-            var ua = navigator.userAgent.toLowerCase();
-            if (ua.indexOf('opera mini') > -1) document.documentElement.className += ' opera-mini';
-            if (ua.indexOf('symbian') > -1) document.documentElement.className += ' symbian';
-            if (!document.querySelector) document.documentElement.className += ' legacy-mode';
-        })();
+    <!-- Детекция очень старых браузеров -->
+    <script type="text/javascript">
+        // Простая детекция без использования современного JS
+        var ua = navigator.userAgent.toLowerCase();
+        var isOldBrowser = ua.indexOf('opera mini') > -1 || 
+                          ua.indexOf('symbian') > -1 || 
+                          ua.indexOf('series60') > -1 ||
+                          typeof document.getElementById == 'undefined';
+        
+        if (isOldBrowser) {
+            document.documentElement.className += ' old-browser';
+        }
     </script>
 </head>
 <body>
@@ -34,21 +27,33 @@
     <div id="loginScreen" class="screen">
         <div class="container">
             <h1>💬 Веб-чат</h1>
-            <form id="loginForm">
-                <input 
-                    type="text" 
-                    id="nicknameInput" 
-                    placeholder="Ваш никнейм" 
-                    maxlength="20" 
-                    required
-                    autocomplete="off"
-                    autocapitalize="words"
-                >
-                <button type="submit">
-                    Войти в чат
-                </button>
+            <form id="loginForm" method="post" action="javascript:void(0);">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td>
+                            <input 
+                                type="text" 
+                                id="nicknameInput" 
+                                name="nickname"
+                                value="" 
+                                maxlength="20"
+                                style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc;"
+                            />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input 
+                                type="button" 
+                                value="Войти в чат" 
+                                onclick="handleLogin()"
+                                style="width: 100%; padding: 10px; background: #3498db; color: white; border: none;"
+                            />
+                        </td>
+                    </tr>
+                </table>
             </form>
-            <div style="margin-top: 10px; font-size: 10px; color: #7f8c8d;">
+            <div style="margin-top: 10px; font-size: 10px; color: #666;">
                 Для старых устройств
             </div>
         </div>
@@ -58,87 +63,313 @@
     <div id="chatScreen" class="screen hidden">
         <!-- Заголовок -->
         <div class="chat-header">
-            <span id="userNickname"></span>
-            <button id="logoutBtn">Выход</button>
+            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td id="userNickname" style="color: white; font-weight: bold;"></td>
+                    <td align="right">
+                        <input 
+                            type="button" 
+                            value="Выход" 
+                            onclick="handleLogout()"
+                            style="padding: 4px 8px; font-size: 10px; background: #e74c3c; color: white; border: none;"
+                        />
+                    </td>
+                </tr>
+            </table>
         </div>
         
         <!-- Сообщения -->
         <div id="messagesContainer" class="messages-container">
             <div id="messagesList" class="messages-list">
-                <!-- Сообщения будут добавляться здесь -->
+                <div class="loading">⏳ Загрузка...</div>
             </div>
         </div>
         
         <!-- Ввод сообщения -->
         <div class="chat-input">
-            <form id="messageForm">
-                <input 
-                    type="text" 
-                    id="messageInput" 
-                    placeholder="Сообщение..." 
-                    maxlength="500"
-                    required
-                    autocomplete="off"
-                >
-                <button type="submit">📤</button>
+            <form method="post" action="javascript:void(0);">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="70%">
+                            <input 
+                                type="text" 
+                                id="messageInput" 
+                                name="message"
+                                value=""
+                                maxlength="500"
+                                style="width: 100%; padding: 6px; border: 1px solid #ccc;"
+                            />
+                        </td>
+                        <td width="30%" align="right">
+                            <input 
+                                type="button" 
+                                value="📤" 
+                                onclick="handleSendMessage()"
+                                style="width: 100%; padding: 6px; background: #3498db; color: white; border: none;"
+                            />
+                        </td>
+                    </tr>
+                </table>
             </form>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Очень простой JavaScript для старых браузеров -->
+    <script type="text/javascript">
+        // Глобальные переменные
+        var currentUser = null;
+        var lastMessageTime = 0;
+        var pollInterval = null;
+        var isOldBrowser = typeof XMLHttpRequest == 'undefined';
+        
+        // Создание XHR для старых браузеров
+        function createXHR() {
+            if (typeof XMLHttpRequest != 'undefined') {
+                return new XMLHttpRequest();
+            } else if (typeof ActiveXObject != 'undefined') {
+                try {
+                    return new ActiveXObject('Microsoft.XMLHTTP');
+                } catch (e) {
+                    try {
+                        return new ActiveXObject('Msxml2.XMLHTTP');
+                    } catch (e2) {
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        // Простая замена trim для старых браузеров
+        function trim(str) {
+            return str.replace(/^\s+|\s+$/g, '');
+        }
+        
+        // Вход в чат
+        function handleLogin() {
+            var nicknameInput = document.getElementById('nicknameInput');
+            var nickname = trim(nicknameInput.value);
+            
+            if (nickname.length < 2) {
+                alert('Никнейм должен содержать минимум 2 символа');
+                return;
+            }
+            
+            currentUser = nickname;
+            document.getElementById('userNickname').innerHTML = nickname;
+            
+            // Скрыть экран входа, показать чат
+            document.getElementById('loginScreen').className = 'screen hidden';
+            document.getElementById('chatScreen').className = 'screen';
+            
+            // Загрузить сообщения
+            loadMessages();
+            
+            // Запустить polling
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(loadNewMessages, 3000);
+        }
+        
+        // Загрузка всех сообщений
+        function loadMessages() {
+            var xhr = createXHR();
+            if (!xhr) {
+                document.getElementById('messagesList').innerHTML = '<div class="error">Браузер не поддерживается</div>';
+                return;
+            }
+            
+            xhr.open('GET', '/api/messages?limit=20', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        try {
+                            var messages = eval('(' + xhr.responseText + ')'); // JSON.parse для старых браузеров
+                            displayMessages(messages);
+                        } catch (e) {
+                            document.getElementById('messagesList').innerHTML = '<div class="error">Ошибка загрузки</div>';
+                        }
+                    } else {
+                        document.getElementById('messagesList').innerHTML = '<div class="error">Ошибка соединения</div>';
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        // Загрузка новых сообщений
+        function loadNewMessages() {
+            var xhr = createXHR();
+            if (!xhr) return;
+            
+            xhr.open('GET', '/api/messages?since=' + lastMessageTime, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    try {
+                        var messages = eval('(' + xhr.responseText + ')');
+                        if (messages.length > 0) {
+                            appendMessages(messages);
+                        }
+                    } catch (e) {
+                        // Игнорируем ошибки
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        // Отображение сообщений
+        function displayMessages(messages) {
+            var html = '';
+            for (var i = 0; i < messages.length; i++) {
+                html += formatMessage(messages[i]);
+                if (messages[i].timestamp > lastMessageTime) {
+                    lastMessageTime = messages[i].timestamp;
+                }
+            }
+            document.getElementById('messagesList').innerHTML = html;
+            scrollToBottom();
+        }
+        
+        // Добавление новых сообщений
+        function appendMessages(messages) {
+            var messagesList = document.getElementById('messagesList');
+            var html = messagesList.innerHTML;
+            
+            for (var i = 0; i < messages.length; i++) {
+                // Не показываем свои сообщения повторно
+                if (!(messages[i].source == 'user' && messages[i].nickname == currentUser)) {
+                    html += formatMessage(messages[i]);
+                }
+                if (messages[i].timestamp > lastMessageTime) {
+                    lastMessageTime = messages[i].timestamp;
+                }
+            }
+            
+            messagesList.innerHTML = html;
+            scrollToBottom();
+        }
+        
+        // Форматирование сообщения
+        function formatMessage(msg) {
+            var cssClass = msg.source || 'user';
+            var time = new Date(msg.timestamp);
+            var hours = time.getHours();
+            var minutes = time.getMinutes();
+            if (minutes < 10) minutes = '0' + minutes;
+            
+            return '<div class="message ' + cssClass + '">' +
+                   '<div class="message-author">' + msg.nickname + '</div>' +
+                   '<div class="message-text">' + msg.text + '</div>' +
+                   '<div class="message-time">' + hours + ':' + minutes + '</div>' +
+                   '</div>';
+        }
+        
+        // Отправка сообщения
+        function handleSendMessage() {
+            var messageInput = document.getElementById('messageInput');
+            var message = trim(messageInput.value);
+            
+            if (!message) return;
+            
+            // Показать сообщение сразу
+            var messageData = {
+                nickname: currentUser,
+                text: message,
+                timestamp: new Date().getTime(),
+                source: 'user'
+            };
+            
+            appendMessages([messageData]);
+            messageInput.value = '';
+            
+            // Отправить на сервер
+            var xhr = createXHR();
+            if (!xhr) return;
+            
+            xhr.open('POST', '/api/messages', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        lastMessageTime = messageData.timestamp;
+                    } else {
+                        // Показать ошибку
+                        var errorMsg = {
+                            nickname: 'Система',
+                            text: 'Ошибка отправки сообщения',
+                            timestamp: new Date().getTime(),
+                            source: 'error'
+                        };
+                        appendMessages([errorMsg]);
+                    }
+                }
+            };
+            
+            // Простая JSON сериализация для старых браузеров
+            var jsonData = '{"nickname":"' + currentUser + '","text":"' + message.replace(/"/g, '\\"') + '","timestamp":' + messageData.timestamp + '}';
+            xhr.send(jsonData);
+        }
+        
+        // Прокрутка вниз
+        function scrollToBottom() {
+            var container = document.getElementById('messagesContainer');
+            if (container.scrollTop !== undefined) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+        
+        // Выход из чата
+        function handleLogout() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            
+            currentUser = null;
+            lastMessageTime = 0;
+            document.getElementById('messagesList').innerHTML = '';
+            document.getElementById('nicknameInput').value = '';
+            
+            document.getElementById('chatScreen').className = 'screen hidden';
+            document.getElementById('loginScreen').className = 'screen';
+        }
+        
+        // Обработка Enter в полях ввода
+        function handleKeyPress(event, action) {
+            var keyCode = event.keyCode || event.which;
+            if (keyCode == 13) { // Enter
+                if (action == 'login') {
+                    handleLogin();
+                } else if (action == 'send') {
+                    handleSendMessage();
+                }
+                return false;
+            }
+            return true;
+        }
+        
+        // Инициализация после загрузки страницы
+        window.onload = function() {
+            // Добавляем обработчики Enter
+            var nicknameInput = document.getElementById('nicknameInput');
+            var messageInput = document.getElementById('messageInput');
+            
+            if (nicknameInput.addEventListener) {
+                nicknameInput.addEventListener('keypress', function(e) { return handleKeyPress(e, 'login'); }, false);
+                messageInput.addEventListener('keypress', function(e) { return handleKeyPress(e, 'send'); }, false);
+            } else {
+                nicknameInput.onkeypress = function(e) { return handleKeyPress(e || window.event, 'login'); };
+                messageInput.onkeypress = function(e) { return handleKeyPress(e || window.event, 'send'); };
+            }
+        };
+    </script>
     
-    <!-- Fallback для браузеров без JS -->
+    <!-- Fallback для браузеров без JavaScript -->
     <noscript>
-        <div class="no-js-message">
+        <div style="padding: 20px; margin: 20px; background: #fff3cd; border: 1px solid #ffeaa7; text-align: center;">
             <h2>Требуется JavaScript</h2>
             <p>Включите JavaScript для работы чата.</p>
         </div>
     </noscript>
-</body>
-</html>
-            aria-label="Сообщения чата"
-        >
-            <div id="messagesList" class="messages-list">
-                <div class="loading" id="loadingIndicator">
-                    ⏳ Загрузка сообщений...
-                </div>
-            </div>
-        </div>
-        
-        <!-- Поле ввода сообщения -->
-        <div class="chat-input" role="form">
-            <form id="messageForm" method="post" action="#">
-                <input 
-                    type="text" 
-                    id="messageInput" 
-                    name="message"
-                    placeholder="Введите сообщение..." 
-                    maxlength="500"
-                    autocomplete="off"
-                    autocapitalize="sentences"
-                    spellcheck="true"
-                    required
-                    aria-label="Текст сообщения"
-                >
-                <button 
-                    type="submit"
-                    aria-label="Отправить сообщение"
-                    title="Отправить сообщение"
-                >
-                    📤 Отправить
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Загрузка скрипта в конце для лучшей производительности -->
-    <script src="script.js" defer></script>
-    
-    <!-- Альтернативный контент для браузеров без поддержки скриптов -->
-    <div id="fallbackContent" style="display: none;">
-        <h2>Браузер не поддерживается</h2>
-        <p>Ваш браузер не поддерживает необходимые функции для работы чата.</p>
-        <p>Попробуйте обновить браузер или использовать другой.</p>
-    </div>
 </body>
 </html>

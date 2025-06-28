@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Веб-чат - Простая версия</title>
+    <style type="text/css">
+        body { font-family: Arial; font-size: 12px; margin: 20px; background: #f0f0f0; }
+        .container { max-width: 300px; margin: 0 auto; background: white; padding: 20px; border: 1px solid #ccc; }
+        input { width: 90%; padding: 5px; margin: 5px 0; border: 1px solid #ccc; }
+        .button { background: #3498db; color: white; border: none; padding: 8px 16px; cursor: pointer; }
+        .messages { height: 200px; overflow: auto; border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fff; }
+        .message { margin: 5px 0; padding: 5px; border-left: 3px solid #ddd; background: #f9f9f9; }
+        .error { color: red; background: #ffe6e6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💬 Веб-чат</h1>
+        <p><strong>Простая версия для старых браузеров</strong></p>
+        
+        <form action="/api/messages" method="post">
+            <p>Ваш никнейм:</p>
+            <input type="text" name="nickname" maxlength="20" required>
+            
+            <p>Сообщение:</p>
+            <input type="text" name="text" maxlength="500" required>
+            
+            <p><input type="submit" value="Отправить сообщение" class="button"></p>
+        </form>
+        
+        <div class="messages">
+            <div class="message">
+                <strong>Система:</strong> Используйте форму выше для отправки сообщений
+            </div>
+        </div>
+        
+        <p><a href="/" style="color: #3498db;">Попробовать основную версию</a></p>
+        
+        <script type="text/javascript">
+            // Автообновление каждые 10 секунд
+            setTimeout(function() { 
+                if (typeof location.reload != 'undefined') {
+                    location.reload(); 
+                }
+            }, 10000);
+        </script>
+    </div>
+</body>
+</html>

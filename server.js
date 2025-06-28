@@ -74,6 +74,20 @@ let messages = [];
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware для обработки старых браузеров
+app.use((req, res, next) => {
+    const userAgent = req.get('User-Agent') || '';
+    const isVeryOldBrowser = 
+        userAgent.includes('Opera Mini') ||
+        userAgent.includes('Symbian') ||
+        userAgent.includes('Series60') ||
+        userAgent.includes('MSIE 6') ||
+        userAgent.includes('MSIE 7');
+    
+    req.isVeryOldBrowser = isVeryOldBrowser;
+    next();
+});
+
 // Отправка сообщения в Telegram
 async function sendToTelegram(text) {
     if (bot && TELEGRAM_CHAT_ID && TELEGRAM_CHAT_ID !== 'YOUR_CHAT_ID_HERE') {
@@ -104,20 +118,38 @@ app.get('/api/messages', (req, res) => {
     res.json(recentMessages);
 });
 
-// API для отправки сообщений
+// API для отправки сообщений - добавим поддержку form data
 app.post('/api/messages', async (req, res) => {
-    const message = req.body;
-    console.log('📝 Получено сообщение от пользователя:', message);
+    console.log('📝 Получен запрос:', req.body);
+    
+    let message;
+    
+    // Поддержка и JSON и form data
+    if (req.is('application/json')) {
+        message = req.body;
+    } else {
+        // Form data от старых браузеров
+        message = {
+            nickname: req.body.nickname,
+            text: req.body.text,
+            timestamp: Date.now()
+        };
+    }
     
     // Валидация
     if (!message.nickname || !message.text) {
-        return res.status(400).json({ error: 'Nickname and text are required' });
+        if (req.is('application/json')) {
+            return res.status(400).json({ error: 'Nickname and text are required' });
+        } else {
+            // Для старых браузеров - редирект обратно
+            return res.redirect('/?error=empty_fields');
+        }
     }
     
     const messageData = {
         nickname: message.nickname,
         text: message.text,
-        timestamp: Date.now(),
+        timestamp: message.timestamp || Date.now(),
         source: 'user'
     };
     
@@ -127,7 +159,12 @@ app.post('/api/messages', async (req, res) => {
     // Отправка в Telegram
     await sendToTelegram(`💬 ${message.nickname}: ${message.text}`);
     
-    res.json({ success: true });
+    if (req.is('application/json')) {
+        res.json({ success: true });
+    } else {
+        // Для старых браузеров - редирект с успехом
+        res.redirect('/?success=message_sent');
+    }
 });
 
 // Webhook для Telegram (для production)
@@ -181,9 +218,14 @@ app.get('/api/test-telegram', async (req, res) => {
     }
 });
 
-// Главная страница
+// Главная страница с определением типа браузера
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    if (req.isVeryOldBrowser) {
+        // Отправляем упрощенную версию
+        res.sendFile(path.join(__dirname, 'public', 'fallback.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
 });
 
 // Экспорт для Vercel
