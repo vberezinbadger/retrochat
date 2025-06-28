@@ -144,7 +144,7 @@ app.post('/api/messages', async (req, res) => {
 // Webhook для Telegram (для production)
 app.post('/api/telegram-webhook', (req, res) => {
     const update = req.body;
-    console.log('🔗 Webhook получен:', JSON.stringify(update, null, 2));
+    console.log('Webhook получен:', JSON.stringify(update, null, 2));
     
     if (update.message && TELEGRAM_CHAT_ID && 
         update.message.chat.id.toString() === TELEGRAM_CHAT_ID && 
@@ -158,7 +158,7 @@ app.post('/api/telegram-webhook', (req, res) => {
         };
         
         messages.push(messageData);
-        console.log('✅ Сообщение из webhook добавлено');
+        console.log('Сообщение из webhook добавлено');
         
         // Ограничиваем количество сообщений в памяти
         if (messages.length > 100) {
@@ -206,6 +206,11 @@ app.get('/api/test-telegram', async (req, res) => {
     }
 });
 
+// Главная страница
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Экспорт для Vercel
 module.exports = app;
 
@@ -213,29 +218,13 @@ module.exports = app;
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        console.log(`🚀 Сервер запущен на порту ${PORT}`);
-        console.log(`📱 Откройте http://localhost:${PORT} в браузере`);
+        console.log(`Сервер запущен на порту ${PORT}`);
+        console.log(`Откройте http://localhost:${PORT} в браузере`);
         
         if (TELEGRAM_TOKEN && TELEGRAM_CHAT_ID) {
-            console.log('🤖 Telegram бот настроен и готов к работе');
+            console.log('Telegram бот настроен и готов к работе');
         } else {
-            console.log('⚠️  Настройте TELEGRAM_TOKEN и TELEGRAM_CHAT_ID в .env файле');
-        }
-    });
-}
-module.exports = app;
-
-// Для локальной разработки
-if (require.main === module) {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`🚀 Сервер запущен на порту ${PORT}`);
-        console.log(`📱 Откройте http://localhost:${PORT} в браузере`);
-        
-        if (TELEGRAM_TOKEN && TELEGRAM_CHAT_ID) {
-            console.log('🤖 Telegram бот настроен и готов к работе');
-        } else {
-            console.log('⚠️  Настройте TELEGRAM_TOKEN и TELEGRAM_CHAT_ID в .env файле');
+            console.log('Настройте TELEGRAM_TOKEN и TELEGRAM_CHAT_ID в .env файле');
         }
     });
 }
