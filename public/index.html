@@ -5,66 +5,273 @@
     <meta name="viewport" content="width=240">
     <title>Чат</title>
     <style>
-        body { font-family: Arial; font-size: 12px; margin: 0; padding: 0; background: #f0f0f0; }
-        .screen { width: 100%; }
+        * { margin: 0; padding: 0; }
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 12px; 
+            background: #f0f0f0; 
+            width: 100%; 
+            height: 100%; 
+        }
+        
+        .screen { 
+            width: 100%; 
+            height: 100vh; 
+            position: relative; 
+        }
+        
         .hidden { display: none; }
-        .container { width: 90%; max-width: 280px; margin: 20px auto; padding: 15px; background: white; border: 1px solid #ccc; }
-        h1 { margin: 0 0 15px 0; font-size: 16px; text-align: center; }
-        input[type=text] { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; font-size: 12px; }
-        input[type=button] { width: 100%; padding: 8px; background: #007acc; color: white; border: none; font-size: 12px; }
-        .chat-header { background: #333; color: white; padding: 8px; font-size: 11px; }
-        .logout-btn { float: right; padding: 4px 8px; background: #cc0000; color: white; border: none; font-size: 10px; }
-        .messages { height: 250px; overflow-y: auto; border: 1px solid #ccc; background: white; }
-        .msg-list { padding: 5px; }
-        .msg { margin: 5px 0; padding: 5px; border-left: 3px solid #ccc; background: #f9f9f9; font-size: 11px; }
-        .msg.user { background: #e8f5e8; border-left-color: #28a745; margin-left: 20px; }
-        .msg.telegram { background: #e3f2fd; border-left-color: #007acc; margin-right: 20px; }
-        .msg-author { font-weight: bold; font-size: 10px; margin-bottom: 2px; }
-        .msg-text { font-size: 11px; margin-bottom: 2px; }
-        .msg-time { font-size: 9px; color: #666; }
-        .input-area { background: #eee; padding: 5px; border: 1px solid #ccc; }
-        .input-table { width: 100%; }
-        .input-table td { vertical-align: top; }
-        .send-btn { width: 100%; padding: 6px; background: #007acc; color: white; border: none; font-size: 11px; }
-        .loading { text-align: center; padding: 15px; color: #666; }
-        .error { background: #ffebee; color: #c62828; padding: 8px; margin: 5px 0; border: 1px solid #ffcdd2; }
+        
+        /* Экран входа */
+        .login-container { 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 280px;
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        
+        /* Для очень старых браузеров */
+        .login-container-fallback {
+            margin: 50px auto;
+            width: 90%;
+            max-width: 280px;
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        
+        h1 { 
+            margin-bottom: 20px; 
+            font-size: 16px; 
+            color: #333; 
+        }
+        
+        .input-field { 
+            width: 100%; 
+            padding: 8px; 
+            margin: 8px 0; 
+            border: 1px solid #ccc; 
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+        
+        .btn { 
+            width: 100%; 
+            padding: 10px; 
+            background: #007acc; 
+            color: white; 
+            border: none; 
+            font-size: 12px; 
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        
+        .btn:hover { background: #005999; }
+        
+        /* Чат */
+        .chat-header { 
+            background: #333; 
+            color: white; 
+            padding: 8px; 
+            font-size: 11px; 
+            height: 32px;
+            box-sizing: border-box;
+        }
+        
+        .user-info { 
+            float: left; 
+            line-height: 16px; 
+        }
+        
+        .logout-btn { 
+            float: right; 
+            padding: 4px 8px; 
+            background: #cc0000; 
+            color: white; 
+            border: none; 
+            font-size: 10px; 
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover { background: #990000; }
+        
+        .chat-content {
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .messages-area { 
+            flex: 1;
+            overflow-y: auto; 
+            border: 1px solid #ccc; 
+            background: white;
+            min-height: 200px;
+        }
+        
+        .msg-list { 
+            padding: 8px; 
+        }
+        
+        .msg { 
+            margin: 8px 0; 
+            padding: 6px; 
+            border-left: 3px solid #ccc; 
+            background: #f9f9f9; 
+            font-size: 11px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .msg.user { 
+            background: #e8f5e8; 
+            border-left-color: #28a745; 
+            margin-left: 20px; 
+        }
+        
+        .msg.telegram { 
+            background: #e3f2fd; 
+            border-left-color: #007acc; 
+            margin-right: 20px; 
+        }
+        
+        .msg.error {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+        
+        .msg-author { 
+            font-weight: bold; 
+            font-size: 10px; 
+            margin-bottom: 3px; 
+            color: #333;
+        }
+        
+        .msg-text { 
+            font-size: 11px; 
+            margin-bottom: 3px; 
+            line-height: 1.3;
+        }
+        
+        .msg-time { 
+            font-size: 9px; 
+            color: #666; 
+        }
+        
+        .input-area { 
+            background: #eee; 
+            padding: 8px; 
+            border: 1px solid #ccc;
+            height: 48px;
+            box-sizing: border-box;
+        }
+        
+        .input-row {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .input-row td {
+            vertical-align: middle;
+            padding: 0;
+        }
+        
+        .msg-input { 
+            width: 100%;
+            padding: 6px; 
+            border: 1px solid #ccc; 
+            font-size: 11px;
+            box-sizing: border-box;
+        }
+        
+        .send-btn { 
+            width: 100%;
+            padding: 6px; 
+            background: #007acc; 
+            color: white; 
+            border: none; 
+            font-size: 11px; 
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        
+        .send-btn:hover { background: #005999; }
+        
+        .loading { 
+            text-align: center; 
+            padding: 20px; 
+            color: #666; 
+            font-style: italic;
+        }
+        
+        .clear { clear: both; }
+        
+        /* Адаптация для маленьких экранов */
+        @media screen and (max-width: 240px) {
+            .login-container {
+                position: static;
+                transform: none;
+                margin: 20px auto;
+                width: 95%;
+                padding: 10px;
+            }
+            
+            .msg { margin: 5px 0; padding: 4px; }
+            .msg.user { margin-left: 10px; }
+            .msg.telegram { margin-right: 10px; }
+        }
+        
+        @media screen and (max-height: 320px) {
+            .messages-area { min-height: 150px; }
+            .login-container { margin: 10px auto; }
+        }
     </style>
 </head>
 <body>
     <!-- Экран входа -->
     <div id="loginScreen" class="screen">
-        <div class="container">
+        <div class="login-container">
             <h1>Веб-чат</h1>
-            <input type="text" id="nicknameInput" placeholder="Введите никнейм" maxlength="20">
-            <input type="button" value="Войти в чат" onclick="login()">
+            <input type="text" id="nicknameInput" class="input-field" placeholder="Введите никнейм" maxlength="20">
+            <input type="button" class="btn" value="Войти в чат" onclick="login()">
         </div>
     </div>
 
     <!-- Экран чата -->
     <div id="chatScreen" class="screen hidden">
         <div class="chat-header">
-            <span id="userNick"></span>
+            <div class="user-info" id="userNick"></div>
             <input type="button" class="logout-btn" value="Выход" onclick="logout()">
-            <div style="clear: both;"></div>
+            <div class="clear"></div>
         </div>
         
-        <div class="messages" id="messagesContainer">
-            <div class="msg-list" id="messagesList">
-                <div class="loading">Загрузка...</div>
+        <div class="chat-content">
+            <div class="messages-area" id="messagesContainer">
+                <div class="msg-list" id="messagesList">
+                    <div class="loading">⏳ Загрузка...</div>
+                </div>
             </div>
-        </div>
-        
-        <div class="input-area">
-            <table class="input-table">
-                <tr>
-                    <td width="70%">
-                        <input type="text" id="messageInput" placeholder="Сообщение" maxlength="300">
-                    </td>
-                    <td width="30%">
-                        <input type="button" class="send-btn" value="Отправить" onclick="sendMessage()">
-                    </td>
-                </tr>
-            </table>
+            
+            <div class="input-area">
+                <table class="input-row" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="75%">
+                            <input type="text" id="messageInput" class="msg-input" placeholder="Сообщение..." maxlength="300">
+                        </td>
+                        <td width="25%">
+                            <input type="button" class="send-btn" value="➤" onclick="sendMessage()">
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -72,6 +279,7 @@
         var currentUser = null;
         var lastMessageTime = 0;
         var pollTimer = null;
+        var isHistoryLoaded = false;
         
         function createXHR() {
             if (window.XMLHttpRequest) return new XMLHttpRequest();
@@ -101,11 +309,10 @@
             document.getElementById('loginScreen').className = 'screen hidden';
             document.getElementById('chatScreen').className = 'screen';
             
-            loadMessages();
-            startPolling();
+            loadHistory();
         }
         
-        function loadMessages() {
+        function loadHistory() {
             var xhr = createXHR();
             if (!xhr) {
                 showError('Браузер не поддерживается');
@@ -115,15 +322,21 @@
             xhr.open('GET', '/api/messages?limit=20', true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState == 4) {
+                    removeLoading();
+                    
                     if (xhr.status == 200) {
                         try {
                             var messages = eval('(' + xhr.responseText + ')');
                             displayMessages(messages);
+                            isHistoryLoaded = true;
+                            startPolling();
                         } catch (e) {
                             showError('Ошибка загрузки сообщений');
+                            startPolling();
                         }
                     } else {
-                        showError('Ошибка соединения');
+                        showError('Ошибка соединения (' + xhr.status + ')');
+                        startPolling();
                     }
                 }
             };
@@ -142,9 +355,19 @@
                         try {
                             var messages = eval('(' + xhr.responseText + ')');
                             if (messages.length > 0) {
-                                appendMessages(messages);
+                                for (var i = 0; i < messages.length; i++) {
+                                    // Не показываем дубли своих сообщений
+                                    if (!(messages[i].source === 'user' && messages[i].nickname === currentUser)) {
+                                        appendMessage(messages[i]);
+                                    }
+                                    if (messages[i].timestamp > lastMessageTime) {
+                                        lastMessageTime = messages[i].timestamp;
+                                    }
+                                }
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            console.log && console.log('Ошибка парсинга:', e);
+                        }
                     }
                 };
                 xhr.send();
@@ -163,17 +386,9 @@
             scrollToBottom();
         }
         
-        function appendMessages(messages) {
+        function appendMessage(msg) {
             var list = document.getElementById('messagesList');
-            var html = list.innerHTML;
-            
-            for (var i = 0; i < messages.length; i++) {
-                html += formatMessage(messages[i]);
-                if (messages[i].timestamp > lastMessageTime) {
-                    lastMessageTime = messages[i].timestamp;
-                }
-            }
-            
+            var html = list.innerHTML + formatMessage(msg);
             list.innerHTML = html;
             scrollToBottom();
         }
@@ -184,11 +399,29 @@
             var minutes = time.getMinutes();
             if (minutes < 10) minutes = '0' + minutes;
             
-            return '<div class="msg ' + (msg.source || 'user') + '">' +
-                   '<div class="msg-author">' + msg.nickname + '</div>' +
-                   '<div class="msg-text">' + msg.text + '</div>' +
+            var sourceClass = msg.source || 'user';
+            var emoji = '';
+            
+            if (msg.source === 'telegram') {
+                emoji = 'TG ';
+            } else if (msg.source === 'user') {
+                emoji = 'RC ';
+            } else if (msg.source === 'error') {
+                emoji = 'W ';
+            }
+            
+            return '<div class="msg ' + sourceClass + '">' +
+                   '<div class="msg-author">' + emoji + msg.nickname + '</div>' +
+                   '<div class="msg-text">' + escapeHtml(msg.text) + '</div>' +
                    '<div class="msg-time">' + hours + ':' + minutes + '</div>' +
                    '</div>';
+        }
+        
+        function escapeHtml(text) {
+            return text.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
         }
         
         function sendMessage() {
@@ -197,179 +430,126 @@
             
             if (!text) return;
             
+            var timestamp = new Date().getTime();
+            
             // Показать сразу
             var msg = {
                 nickname: currentUser,
                 text: text,
-                timestamp: new Date().getTime(),
+                timestamp: timestamp,
                 source: 'user'
             };
-            appendMessages([msg]);
+            appendMessage(msg);
             input.value = '';
             
             // Отправить на сервер
             var xhr = createXHR();
-            if (!xhr) return;
-            
-            xhr.open('POST', '/api/messages', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            
-            var data = '{"nickname":"' + currentUser + '","text":"' + text.replace(/"/g, '\\"') + '"}';
-            xhr.send(data);
-        }
-        
-        function scrollToBottom() {
-            var container = document.getElementById('messagesContainer');
-            if (container.scrollTop !== undefined) {
-                container.scrollTop = container.scrollHeight;
+            if (!xhr) {
+                showError('Не удалось отправить сообщение');
+                return;
             }
-        }
-        
-        function logout() {
-            if (pollTimer) clearInterval(pollTimer);
-            
-            currentUser = null;
-            lastMessageTime = 0;
-            document.getElementById('messagesList').innerHTML = '';
-            document.getElementById('nicknameInput').value = '';
-            
-            document.getElementById('chatScreen').className = 'screen hidden';
-            document.getElementById('loginScreen').className = 'screen';
-        }
-        
-        function showError(text) {
-            document.getElementById('messagesList').innerHTML = 
-                '<div class="error">' + text + '</div>';
-        }
-        
-        // Обработка Enter
-        function handleKey(event, action) {
-            var key = event.keyCode || event.which;
-            if (key == 13) {
-                if (action == 'login') login();
-                else if (action == 'send') sendMessage();
-                return false;
-            }
-            return true;
-        }
-        
-        window.onload = function() {
-            var nickInput = document.getElementById('nicknameInput');
-            var msgInput = document.getElementById('messageInput');
-            
-            if (nickInput.addEventListener) {
-                nickInput.addEventListener('keypress', function(e) { return handleKey(e, 'login'); });
-                msgInput.addEventListener('keypress', function(e) { return handleKey(e, 'send'); });
-            } else {
-                nickInput.onkeypress = function(e) { return handleKey(e || window.event, 'login'); };
-                msgInput.onkeypress = function(e) { return handleKey(e || window.event, 'send'); };
-            }
-        };
-    </script>
-</body>
-</html>
-            
-            if (!message) return;
-            
-            // Показать сообщение сразу
-            var messageData = {
-                nickname: currentUser,
-                text: message,
-                timestamp: new Date().getTime(),
-                source: 'user'
-            };
-            
-            appendMessages([messageData]);
-            messageInput.value = '';
-            
-            // Отправить на сервер
-            var xhr = createXHR();
-            if (!xhr) return;
             
             xhr.open('POST', '/api/messages', true);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onreadystatechange = function() {
                 if (xhr.readyState == 4) {
                     if (xhr.status == 200) {
-                        lastMessageTime = messageData.timestamp;
+                        lastMessageTime = timestamp;
                     } else {
-                        // Показать ошибку
                         var errorMsg = {
                             nickname: 'Система',
-                            text: 'Ошибка отправки сообщения',
+                            text: 'Ошибка отправки: ' + xhr.status,
                             timestamp: new Date().getTime(),
                             source: 'error'
                         };
-                        appendMessages([errorMsg]);
+                        appendMessage(errorMsg);
                     }
                 }
             };
             
-            // Простая JSON сериализация для старых браузеров
-            var jsonData = '{"nickname":"' + currentUser + '","text":"' + message.replace(/"/g, '\\"') + '","timestamp":' + messageData.timestamp + '}';
-            xhr.send(jsonData);
+            var data = '{"nickname":"' + escapeJson(currentUser) + '","text":"' + escapeJson(text) + '","timestamp":' + timestamp + '}';
+            xhr.send(data);
         }
         
-        // Прокрутка вниз
+        function escapeJson(str) {
+            return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        }
+        
         function scrollToBottom() {
             var container = document.getElementById('messagesContainer');
             if (container.scrollTop !== undefined) {
-                container.scrollTop = container.scrollHeight;
+                setTimeout(function() {
+                    container.scrollTop = container.scrollHeight;
+                }, 50);
             }
         }
         
-        // Выход из чата
-        function handleLogout() {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-                pollInterval = null;
+        function logout() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
             }
             
             currentUser = null;
             lastMessageTime = 0;
-            document.getElementById('messagesList').innerHTML = '';
+            isHistoryLoaded = false;
+            document.getElementById('messagesList').innerHTML = '<div class="loading">⏳ Загрузка...</div>';
             document.getElementById('nicknameInput').value = '';
             
             document.getElementById('chatScreen').className = 'screen hidden';
             document.getElementById('loginScreen').className = 'screen';
         }
         
-        // Обработка Enter в полях ввода
+        function removeLoading() {
+            var loading = document.querySelector('.loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        }
+        
+        function showError(text) {
+            removeLoading();
+            var errorMsg = {
+                nickname: 'Система',
+                text: text,
+                timestamp: new Date().getTime(),
+                source: 'error'
+            };
+            appendMessage(errorMsg);
+        }
+        
+        // Обработка Enter
         function handleKeyPress(event, action) {
             var keyCode = event.keyCode || event.which;
-            if (keyCode == 13) { // Enter
+            if (keyCode == 13) {
                 if (action == 'login') {
-                    handleLogin();
+                    login();
                 } else if (action == 'send') {
-                    handleSendMessage();
+                    sendMessage();
                 }
                 return false;
             }
             return true;
         }
         
-        // Инициализация после загрузки страницы
+        // Инициализация
         window.onload = function() {
-            // Добавляем обработчики Enter
-            var nicknameInput = document.getElementById('nicknameInput');
-            var messageInput = document.getElementById('messageInput');
+            var nickInput = document.getElementById('nicknameInput');
+            var msgInput = document.getElementById('messageInput');
             
-            if (nicknameInput.addEventListener) {
-                nicknameInput.addEventListener('keypress', function(e) { return handleKeyPress(e, 'login'); }, false);
-                messageInput.addEventListener('keypress', function(e) { return handleKeyPress(e, 'send'); }, false);
+            if (nickInput.addEventListener) {
+                nickInput.addEventListener('keypress', function(e) { return handleKeyPress(e, 'login'); }, false);
+                msgInput.addEventListener('keypress', function(e) { return handleKeyPress(e, 'send'); }, false);
             } else {
-                nicknameInput.onkeypress = function(e) { return handleKeyPress(e || window.event, 'login'); };
-                messageInput.onkeypress = function(e) { return handleKeyPress(e || window.event, 'send'); };
+                nickInput.onkeypress = function(e) { return handleKeyPress(e || window.event, 'login'); };
+                msgInput.onkeypress = function(e) { return handleKeyPress(e || window.event, 'send'); };
             }
+            
+            // Фокус на поле ввода
+            setTimeout(function() {
+                if (nickInput.focus) nickInput.focus();
+            }, 100);
         };
     </script>
-    
-    <!-- Fallback для браузеров без JavaScript -->
-    <noscript>
-        <div style="padding: 20px; margin: 20px; background: #fff3cd; border: 1px solid #ffeaa7; text-align: center;">
-            <h2>Требуется JavaScript</h2>
-            <p>Включите JavaScript для работы чата.</p>
-        </div>
-    </noscript>
 </body>
 </html>
