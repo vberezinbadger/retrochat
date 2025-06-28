@@ -1,10 +1,26 @@
 (function() {
+    var socket;
     var currentUser = null;
+    var isOldBrowser = false;
     var lastMessageTime = 0;
     var pollInterval;
     var isConnected = false;
     var retryCount = 0;
     var maxRetries = 5;
+    
+    // Детектор старых браузеров
+    function detectOldBrowser() {
+        var ua = navigator.userAgent.toLowerCase();
+        isOldBrowser = ua.indexOf('opera mini') > -1 || 
+                      ua.indexOf('symbian') > -1 ||
+                      ua.indexOf('series60') > -1 ||
+                      !document.querySelector ||
+                      !window.JSON;
+        
+        if (isOldBrowser) {
+            document.body.className += ' opera-mini';
+        }
+    }
     
     // Элементы DOM
     var loginScreen = document.getElementById('loginScreen');
@@ -20,302 +36,275 @@
     
     // Инициализация
     function init() {
-        // Проверка поддержки функций
-        checkBrowserSupport();
+        detectOldBrowser();
         
-        // Обработчики событий
-        loginForm.addEventListener('submit', handleLogin);
-        messageForm.addEventListener('submit', handleSendMessage);
-        logoutBtn.addEventListener('click', handleLogout);
-        
-        // Обработка Enter в поле ввода сообщения
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.keyCode === 13 || e.which === 13) {
-                e.preventDefault();
-                handleSendMessage(e);
-            }
-        });
-        
-        // Создание индикатора подключения
-        createConnectionStatus();
-        
-        // Автофокус на поле никнейма
-        nicknameInput.focus();
-    }
-    
-    // Проверка поддержки браузера
-    function checkBrowserSupport() {
-        var body = document.body;
-        
-        // Проверка поддержки transform
-        if (!supportsCSS('transform')) {
-            body.className += ' no-transform';
-        }
-        
-        // Проверка поддержки calc
-        if (!supportsCSS('calc(100vh - 90px)', 'height')) {
-            body.className += ' no-calc';
-        }
-        
-        // Проверка поддержки анимаций
-        if (!supportsCSS('animation')) {
-            body.className += ' no-animation';
-        }
-        
-        // Режим для очень старых браузеров
-        if (isLegacyBrowser()) {
-            body.className += ' legacy-mode';
-        }
-    }
-    
-    // Проверка поддержки CSS свойств
-    function supportsCSS(property, value) {
-        var element = document.createElement('div');
-        var prefixes = ['', '-webkit-', '-moz-', '-ms-', '-o-'];
-        
-        for (var i = 0; i < prefixes.length; i++) {
-            try {
-                element.style[prefixes[i] + property] = value || 'test';
-                if (element.style[prefixes[i] + property]) {
-                    return true;
-                }
-            } catch (e) {}
-        }
-        return false;
-    }
-    
-    // Определение старых браузеров
-    function isLegacyBrowser() {
-        var ua = navigator.userAgent.toLowerCase();
-        return ua.indexOf('opera mini') !== -1 || 
-               ua.indexOf('symbian') !== -1 ||
-               ua.indexOf('windows ce') !== -1 ||
-               (ua.indexOf('msie') !== -1 && parseInt(ua.split('msie')[1]) < 9);
-    }
-    
-    // Создание индикатора подключения
-    function createConnectionStatus() {
-        var status = document.createElement('div');
-        status.id = 'connectionStatus';
-        status.className = 'connection-status';
-        status.textContent = 'Подключение...';
-        document.body.appendChild(status);
-    }
-    
-    // Обновление статуса подключения
-    function updateConnectionStatus(connected, message) {
-        var status = document.getElementById('connectionStatus');
-        if (!status) return;
-        
-        isConnected = connected;
-        
-        if (connected) {
-            status.className = 'connection-status connected';
-            status.textContent = message || 'Подключено';
-            setTimeout(function() {
-                status.className = 'connection-status';
-            }, 2000);
+        // Фикс для старых браузеров - простые обработчики событий
+        if (loginForm.addEventListener) {
+            loginForm.addEventListener('submit', handleLogin, false);
+            messageForm.addEventListener('submit', handleSendMessage, false);
+            logoutBtn.addEventListener('click', handleLogout, false);
         } else {
-            status.className = 'connection-status show';
-            status.textContent = message || 'Нет подключения';
+            // Для IE8 и старше
+            loginForm.attachEvent('onsubmit', handleLogin);
+            messageForm.attachEvent('onsubmit', handleSendMessage);
+            logoutBtn.attachEvent('onclick', handleLogout);
+        }
+        
+        // Автофокус на поле ввода для удобства
+        if (nicknameInput.focus) {
+            setTimeout(function() {
+                nicknameInput.focus();
+            }, 100);
         }
     }
     
     // Обработка входа в чат
     function handleLogin(e) {
-        e.preventDefault();
-        var nickname = nicknameInput.value.trim();
+        if (e.preventDefault) {
+            e.preventDefault();
+        } else {
+            e.returnValue = false;
+        }
+        
+        var nickname = nicknameInput.value;
+        if (nickname.replace) {
+            nickname = nickname.replace(/^\s+|\s+$/g, ''); // trim для старых браузеров
+        }
         
         if (nickname.length < 2) {
             alert('Никнейм должен содержать минимум 2 символа');
-            return;
-        }
-        
-        if (nickname.length > 20) {
-            alert('Никнейм слишком длинный (максимум 20 символов)');
-            return;
+            return false;
         }
         
         currentUser = nickname;
-        userNickname.textContent = nickname;
+        userNickname.innerHTML = nickname; // innerHTML вместо textContent
+        
+        // Подключение к серверу
+        connectToServer();
         
         // Переключение экранов
         loginScreen.className = 'screen hidden';
         chatScreen.className = 'screen';
         
-        messageInput.focus();
-        
-        // Добавляем приветственное сообщение
-        displayMessage({
-            nickname: 'Система',
-            text: 'Добро пожаловать в чат, ' + nickname + '!',
-            timestamp: Date.now(),
-            source: 'system'
-        });
-        
-        // Начинаем polling сообщений
-        startPolling();
-    }
-    
-    // Начало polling сообщений
-    function startPolling() {
-        updateConnectionStatus(false, 'Подключение...');
-        
-        // Загружаем существующие сообщения
-        loadMessages();
-        
-        // Запускаем периодический опрос
-        pollInterval = setInterval(loadMessages, 3000);
-    }
-    
-    // Загрузка сообщений
-    function loadMessages() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', '/api/messages?since=' + lastMessageTime, true);
-        xhr.timeout = 10000; // 10 секунд таймаут
-        
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    try {
-                        var messages = JSON.parse(xhr.responseText);
-                        var newMessages = 0;
-                        
-                        for (var i = 0; i < messages.length; i++) {
-                            displayMessage(messages[i]);
-                            if (messages[i].timestamp > lastMessageTime) {
-                                lastMessageTime = messages[i].timestamp;
-                                newMessages++;
-                            }
-                        }
-                        
-                        if (newMessages > 0 || !isConnected) {
-                            updateConnectionStatus(true, 'Получено сообщений: ' + newMessages);
-                        }
-                        
-                        retryCount = 0;
-                    } catch (e) {
-                        console.error('Ошибка парсинга сообщений:', e);
-                        updateConnectionStatus(false, 'Ошибка данных');
-                    }
-                } else {
-                    handleConnectionError();
-                }
-            }
-        };
-        
-        xhr.ontimeout = function() {
-            handleConnectionError('Таймаут соединения');
-        };
-        
-        xhr.onerror = function() {
-            handleConnectionError('Ошибка сети');
-        };
-        
-        xhr.send();
-    }
-    
-    // Обработка ошибок подключения
-    function handleConnectionError(message) {
-        retryCount++;
-        updateConnectionStatus(false, message || 'Ошибка подключения');
-        
-        if (retryCount >= maxRetries) {
-            clearInterval(pollInterval);
-            updateConnectionStatus(false, 'Нет соединения. Попробуйте перезагрузить страницу.');
+        if (messageInput.focus) {
+            setTimeout(function() {
+                messageInput.focus();
+            }, 100);
         }
+        
+        return false;
+    }
+    
+    // Подключение к серверу
+    function connectToServer() {
+        // Для старых браузеров сразу используем polling
+        if (isOldBrowser || typeof WebSocket === 'undefined') {
+            pollMessages();
+            return;
+        }
+        
+        try {
+            socket = new WebSocket((window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host);
+            
+            socket.onopen = function() {
+                var joinMessage = JSON.stringify({
+                    type: 'join',
+                    nickname: currentUser
+                });
+                socket.send(joinMessage);
+            };
+            
+            socket.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                displayMessage(data);
+            };
+            
+            socket.onclose = function() {
+                setTimeout(connectToServer, 3000);
+            };
+            
+        } catch (error) {
+            pollMessages();
+        }
+    }
+    
+    // Альтернативный метод для старых браузеров
+    function pollMessages() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+        }
+        
+        pollInterval = setInterval(function() {
+            var xhr = createXHR();
+            if (!xhr) return;
+            
+            xhr.open('GET', '/api/messages?since=' + lastMessageTime, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var messages = JSON.parse(xhr.responseText);
+                            console.log('📨 Получено сообщений:', messages.length);
+                            
+                            for (var i = 0; i < messages.length; i++) {
+                                displayMessage(messages[i]);
+                                if (messages[i].timestamp > lastMessageTime) {
+                                    lastMessageTime = messages[i].timestamp;
+                                }
+                            }
+                            
+                            isConnected = true;
+                            retryCount = 0;
+                        } catch (e) {
+                            console.error('Ошибка парсинга сообщений:', e);
+                        }
+                    } else {
+                        console.error('Ошибка получения сообщений:', xhr.status);
+                        isConnected = false;
+                        retryCount++;
+                        
+                        if (retryCount >= maxRetries) {
+                            showConnectionError();
+                        }
+                    }
+                }
+            };
+            
+            xhr.onerror = function() {
+                console.error('Ошибка сетевого запроса');
+                isConnected = false;
+                retryCount++;
+                
+                if (retryCount >= maxRetries) {
+                    showConnectionError();
+                }
+            };
+            
+            xhr.send();
+        }, 2000); // Уменьшил интервал для лучшей отзывчивости
+    }
+    
+    // Показать ошибку соединения
+    function showConnectionError() {
+        var errorDiv = document.createElement('div');
+        errorDiv.className = 'connection-error';
+        errorDiv.innerHTML = 'Ошибка соединения. Проверьте интернет.';
+        
+        var existingError = document.querySelector('.connection-error');
+        if (existingError) {
+            existingError.parentNode.removeChild(existingError);
+        }
+        
+        messagesList.appendChild(errorDiv);
+    }
+    
+    // Создание XHR объекта для старых браузеров
+    function createXHR() {
+        if (window.XMLHttpRequest) {
+            return new XMLHttpRequest();
+        } else if (window.ActiveXObject) {
+            try {
+                return new ActiveXObject('Microsoft.XMLHTTP');
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
     }
     
     // Отправка сообщения
     function handleSendMessage(e) {
-        e.preventDefault();
-        var message = messageInput.value.trim();
-        
-        if (!message) return;
-        
-        if (message.length > 500) {
-            alert('Сообщение слишком длинное (максимум 500 символов)');
-            return;
+        if (e.preventDefault) {
+            e.preventDefault();
+        } else {
+            e.returnValue = false;
         }
         
-        var sendButton = messageForm.querySelector('button');
-        sendButton.disabled = true;
-        sendButton.textContent = 'Отправка...';
+        var message = messageInput.value;
+        if (message.replace) {
+            message = message.replace(/^\s+|\s+$/g, '');
+        }
+        
+        if (!message) return false;
         
         var messageData = {
             nickname: currentUser,
             text: message,
-            timestamp: Date.now()
+            timestamp: new Date().getTime()
         };
         
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/messages', true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.timeout = 5000;
+        // Показываем сообщение сразу для лучшего UX
+        displayMessage({
+            nickname: currentUser,
+            text: message,
+            timestamp: messageData.timestamp,
+            source: 'user'
+        });
         
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                sendButton.disabled = false;
-                sendButton.textContent = 'Отправить';
-                
-                if (xhr.status === 200) {
-                    messageInput.value = '';
-                    messageInput.focus();
-                    // Принудительно обновляем сообщения
-                    setTimeout(loadMessages, 500);
-                } else {
-                    alert('Ошибка отправки сообщения. Попробуйте еще раз.');
-                }
+        if (socket && socket.readyState === 1) { // WebSocket.OPEN = 1
+            socket.send(JSON.stringify({
+                type: 'message',
+                nickname: currentUser,
+                text: message,
+                timestamp: messageData.timestamp
+            }));
+        } else {
+            // Fallback через HTTP
+            var xhr = createXHR();
+            if (xhr) {
+                xhr.open('POST', '/api/messages', true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status !== 200) {
+                            console.error('Ошибка отправки сообщения:', xhr.status);
+                            showSendError();
+                        }
+                    }
+                };
+                xhr.send(JSON.stringify(messageData));
             }
-        };
+        }
         
-        xhr.ontimeout = function() {
-            sendButton.disabled = false;
-            sendButton.textContent = 'Отправить';
-            alert('Таймаут отправки. Попробуйте еще раз.');
-        };
+        messageInput.value = '';
+        return false;
+    }
+    
+    // Показать ошибку отправки
+    function showSendError() {
+        var errorDiv = document.createElement('div');
+        errorDiv.className = 'send-error';
+        errorDiv.innerHTML = 'Ошибка отправки сообщения';
         
-        xhr.onerror = function() {
-            sendButton.disabled = false;
-            sendButton.textContent = 'Отправить';
-            alert('Ошибка сети. Проверьте подключение.');
-        };
+        messagesList.appendChild(errorDiv);
         
-        xhr.send(JSON.stringify(messageData));
+        setTimeout(function() {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 3000);
     }
     
     // Отображение сообщения
     function displayMessage(data) {
-        // Проверяем, не дублируется ли сообщение
-        var existingMessages = messagesList.querySelectorAll('.message');
-        for (var i = 0; i < existingMessages.length; i++) {
-            var existing = existingMessages[i];
-            if (existing.getAttribute('data-timestamp') === data.timestamp.toString() &&
-                existing.getAttribute('data-author') === data.nickname) {
-                return; // Сообщение уже отображено
-            }
-        }
-        
         var messageDiv = document.createElement('div');
         messageDiv.className = 'message ' + (data.source || 'user');
-        messageDiv.setAttribute('data-timestamp', data.timestamp);
-        messageDiv.setAttribute('data-author', data.nickname);
         
         var authorDiv = document.createElement('div');
         authorDiv.className = 'message-author';
-        authorDiv.textContent = data.nickname;
+        authorDiv.innerHTML = data.nickname;
         
         var textDiv = document.createElement('div');
         textDiv.className = 'message-text';
-        textDiv.textContent = data.text;
+        textDiv.innerHTML = data.text;
         
         var timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         var time = new Date(data.timestamp);
         var hours = time.getHours();
         var minutes = time.getMinutes();
-        timeDiv.textContent = (hours < 10 ? '0' : '') + hours + ':' + 
-            (minutes < 10 ? '0' : '') + minutes;
+        if (minutes < 10) minutes = '0' + minutes;
+        timeDiv.innerHTML = hours + ':' + minutes;
         
         messageDiv.appendChild(authorDiv);
         messageDiv.appendChild(textDiv);
@@ -323,48 +312,50 @@
         
         messagesList.appendChild(messageDiv);
         
-        // Автоскролл вниз
-        setTimeout(function() {
+        // Прокрутка вниз
+        if (messagesContainer.scrollTop !== undefined) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 100);
-        
-        // Ограничиваем количество сообщений для экономии памяти
-        var messages = messagesList.querySelectorAll('.message');
-        if (messages.length > 100) {
-            for (var j = 0; j < 20; j++) {
-                if (messages[j]) {
-                    messagesList.removeChild(messages[j]);
-                }
-            }
         }
     }
     
     // Выход из чата
     function handleLogout() {
+        if (socket && socket.close) {
+            socket.close();
+        }
+        
         if (pollInterval) {
             clearInterval(pollInterval);
         }
         
         currentUser = null;
-        lastMessageTime = 0;
-        retryCount = 0;
         messagesList.innerHTML = '';
         nicknameInput.value = '';
-        
-        var status = document.getElementById('connectionStatus');
-        if (status) {
-            status.className = 'connection-status';
-        }
+        lastMessageTime = 0;
+        isConnected = false;
+        retryCount = 0;
         
         chatScreen.className = 'screen hidden';
         loginScreen.className = 'screen';
         
-        nicknameInput.focus();
+        if (nicknameInput.focus) {
+            setTimeout(function() {
+                nicknameInput.focus();
+            }, 100);
+        }
     }
     
     // Запуск приложения
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        if (document.addEventListener) {
+            document.addEventListener('DOMContentLoaded', init, false);
+        } else {
+            document.attachEvent('onreadystatechange', function() {
+                if (document.readyState === 'complete') {
+                    init();
+                }
+            });
+        }
     } else {
         init();
     }
