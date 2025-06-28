@@ -9,14 +9,9 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Проверка переменных
-if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
-    console.warn('TELEGRAM_TOKEN не настроен');
-}
-
-if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'YOUR_CHAT_ID_HERE') {
-    console.warn('TELEGRAM_CHAT_ID не настроен');
-}
+console.log('Запуск сервера...');
+console.log('TELEGRAM_TOKEN настроен:', !!(TELEGRAM_TOKEN && TELEGRAM_TOKEN !== 'YOUR_BOT_TOKEN_HERE'));
+console.log('TELEGRAM_CHAT_ID настроен:', !!(TELEGRAM_CHAT_ID && TELEGRAM_CHAT_ID !== 'YOUR_CHAT_ID_HERE'));
 
 // Хранение сообщений
 let messages = [];
@@ -28,25 +23,26 @@ if (TELEGRAM_TOKEN && TELEGRAM_TOKEN !== 'YOUR_BOT_TOKEN_HERE') {
         const TelegramBot = require('node-telegram-bot-api');
         
         bot = new TelegramBot(TELEGRAM_TOKEN, { 
-            polling: NODE_ENV === 'development',
-            webHook: false 
+            polling: NODE_ENV === 'development'
         });
         
-        console.log('Telegram бот подключен');
+        console.log('✅ Telegram бот подключен (polling=' + (NODE_ENV === 'development') + ')');
         
         // Обработчик сообщений из Telegram
         bot.on('message', (msg) => {
-            console.log('Сообщение из Telegram:', {
+            console.log('📨 Получено из Telegram:', {
                 chat_id: msg.chat.id,
-                expected_id: TELEGRAM_CHAT_ID,
+                expected_chat_id: TELEGRAM_CHAT_ID,
+                from: msg.from.first_name,
                 text: msg.text
             });
             
-            // Проверяем ID чата и наличие текста
+            // Проверяем что это наш чат и есть текст
             if (TELEGRAM_CHAT_ID && 
                 msg.chat.id.toString() === TELEGRAM_CHAT_ID.toString() && 
                 msg.text && 
-                msg.text.trim()) {
+                msg.text.trim() &&
+                !msg.text.startsWith('[WEB]')) { // Не обрабатываем свои сообщения
                 
                 const messageData = {
                     nickname: msg.from.first_name || msg.from.username || 'Telegram User',
@@ -56,26 +52,28 @@ if (TELEGRAM_TOKEN && TELEGRAM_TOKEN !== 'YOUR_BOT_TOKEN_HERE') {
                 };
                 
                 messages.push(messageData);
-                console.log('Сообщение из Telegram добавлено в чат:', messageData.nickname, ':', messageData.text);
+                console.log('✅ Сообщение из Telegram добавлено:', messageData);
                 
                 // Ограничиваем количество сообщений
                 if (messages.length > 100) {
-                    messages = messages.slice(-80);
+                    messages = messages.slice(-50);
                 }
             }
         });
         
         bot.on('error', (error) => {
-            console.error('Ошибка Telegram бота:', error.message);
+            console.error('❌ Ошибка Telegram бота:', error.message);
         });
         
         bot.on('polling_error', (error) => {
-            console.error('Ошибка polling:', error.message);
+            console.error('❌ Ошибка polling:', error.message);
         });
         
     } catch (error) {
-        console.error('Ошибка подключения к Telegram:', error.message);
+        console.error('❌ Ошибка подключения к Telegram:', error.message);
     }
+} else {
+    console.warn('⚠️ Telegram бот не настроен');
 }
 
 app.use(express.json());
@@ -88,122 +86,109 @@ async function sendToTelegram(nickname, text) {
         try {
             const message = `[WEB] ${nickname}: ${text}`;
             await bot.sendMessage(TELEGRAM_CHAT_ID, message);
-            console.log('Отправлено в Telegram:', message);
+            console.log('📤 Отправлено в Telegram:', message);
+            return true;
         } catch (error) {
-            console.error('Ошибка отправки в Telegram:', error.message);
+            console.error('❌ Ошибка отправки в Telegram:', error.message);
+            return false;
         }
     }
+    return false;
 }
 
 // API получения сообщений
 app.get('/api/messages', (req, res) => {
     const since = parseInt(req.query.since) || 0;
-    const limit = parseInt(req.query.limit) || 30;
+    const limit = parseInt(req.query.limit) || 20;
     
     let recentMessages;
     if (since === 0) {
+        // Первый запрос - последние сообщения
         recentMessages = messages.slice(-limit);
     } else {
+        // Новые сообщения после указанного времени
         recentMessages = messages.filter(msg => msg.timestamp > since);
     }
     
-    console.log('API запрос сообщений: since=' + since + ', найдено=' + recentMessages.length);
-    
+    console.log(`📋 API /messages: since=${since}, limit=${limit}, найдено=${recentMessages.length}`);
     res.json(recentMessages);
 });
 
 // API отправки сообщений
 app.post('/api/messages', async (req, res) => {
-    const { nickname, text, timestamp } = req.body;
+    const { nickname, text } = req.body;
     
     if (!nickname || !text) {
+        console.log('❌ Некорректные данные:', req.body);
         return res.status(400).json({ error: 'Nickname and text required' });
     }
     
     const messageData = {
         nickname: nickname.trim(),
         text: text.trim(),
-        timestamp: timestamp || Date.now(),
+        timestamp: Date.now(),
         source: 'user'
     };
     
     messages.push(messageData);
-    console.log('Новое сообщение от пользователя:', messageData.nickname, ':', messageData.text);
+    console.log('💬 Новое сообщение от пользователя:', messageData);
     
     // Ограничиваем количество сообщений
     if (messages.length > 100) {
-        messages = messages.slice(-80);
+        messages = messages.slice(-50);
     }
     
     // Отправляем в Telegram
-    await sendToTelegram(nickname, text);
+    const telegramSent = await sendToTelegram(nickname, text);
     
-    res.json({ success: true });
+    res.json({ 
+        success: true, 
+        telegram_sent: telegramSent 
+    });
 });
 
-// Webhook для Telegram (для production)
+// Webhook для production
 app.post('/api/telegram-webhook', (req, res) => {
     const update = req.body;
-    console.log('Webhook получен:', JSON.stringify(update, null, 2));
+    console.log('🔗 Webhook получен:', update);
     
     if (update.message && TELEGRAM_CHAT_ID && 
-        update.message.chat.id.toString() === TELEGRAM_CHAT_ID && 
-        update.message.text) {
+        update.message.chat.id.toString() === TELEGRAM_CHAT_ID.toString() && 
+        update.message.text &&
+        !update.message.text.startsWith('[WEB]')) {
         
         const messageData = {
             nickname: update.message.from.first_name || update.message.from.username || 'Telegram User',
-            text: update.message.text,
+            text: update.message.text.trim(),
             timestamp: Date.now(),
             source: 'telegram'
         };
         
         messages.push(messageData);
-        console.log('Сообщение из webhook добавлено');
+        console.log('✅ Сообщение из webhook добавлено:', messageData);
         
-        // Ограничиваем количество сообщений в памяти
         if (messages.length > 100) {
-            messages = messages.slice(-100);
+            messages = messages.slice(-50);
         }
     }
     
     res.json({ ok: true });
 });
 
-// Статус
+// Статус API
 app.get('/api/status', (req, res) => {
     res.json({
         telegram_configured: !!(TELEGRAM_TOKEN && TELEGRAM_TOKEN !== 'YOUR_BOT_TOKEN_HERE'),
         chat_configured: !!(TELEGRAM_CHAT_ID && TELEGRAM_CHAT_ID !== 'YOUR_CHAT_ID_HERE'),
         messages_count: messages.length,
         bot_status: bot ? 'connected' : 'disconnected',
-        environment: NODE_ENV,
-        last_messages: messages.slice(-3).map(m => ({
-            nickname: m.nickname,
-            source: m.source,
-            timestamp: new Date(m.timestamp).toLocaleTimeString()
-        }))
+        environment: NODE_ENV
     });
 });
 
-// API для тестирования Telegram соединения
-app.get('/api/test-telegram', async (req, res) => {
-    if (!bot) {
-        return res.json({ error: 'Telegram бот не подключен' });
-    }
-    
-    try {
-        const me = await bot.getMe();
-        res.json({ 
-            success: true, 
-            bot_info: me,
-            chat_id: TELEGRAM_CHAT_ID,
-            messages_count: messages.length
-        });
-    } catch (error) {
-        res.json({ 
-            error: error.message 
-        });
-    }
+// Главная страница
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Главная страница
@@ -218,8 +203,8 @@ module.exports = app;
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        console.log('Сервер запущен на порту ' + PORT);
-        console.log('Откройте http://localhost:' + PORT + ' в браузере');
+        console.log(`🚀 Сервер запущен на порту ${PORT}`);
+        console.log(`🌐 Откройте http://localhost:${PORT}`);
         
         if (TELEGRAM_TOKEN && TELEGRAM_CHAT_ID) {
             console.log('Telegram бот настроен и готов к работе');
