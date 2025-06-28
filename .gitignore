@@ -1,0 +1,16 @@
+# Переменные окружения
+.env
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Логи
+logs
+*.log
+
+# Временные файлы
+.tmp/
+.cache/
