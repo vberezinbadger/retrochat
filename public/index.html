@@ -635,7 +635,10 @@
             
             // Отправить на сервер
             var xhr = createXHR();
-            if (!xhr) return;
+            if (!xhr) {
+                showError('Невозможно отправить сообщение');
+                return;
+            }
             
             xhr.open('POST', '/api/messages', true);
             xhr.setRequestHeader('Content-Type', 'application/json');
@@ -652,7 +655,17 @@
                 }
             };
             
-            var data = '{"nickname":"' + currentUser.replace(/"/g, '\\"') + '","text":"' + text.replace(/"/g, '\\"') + '","timestamp":' + timestamp + '}';
+            var data;
+            if (window.JSON && JSON.stringify) {
+                data = JSON.stringify({
+                    nickname: currentUser,
+                    text: text,
+                    timestamp: timestamp
+                });
+            } else {
+                data = '{"nickname":"' + currentUser.replace(/"/g, '\\"') + '","text":"' + text.replace(/"/g, '\\"') + '","timestamp":' + timestamp + '}';
+            }
+            
             xhr.send(data);
         }
         
@@ -742,19 +755,6 @@
     </script>
 </body>
 </html>
-            };
-            appendMessage(msg);
-            input.value = '';
-            
-            // Отправить на сервер
-            var xhr = createXHR();
-            if (!xhr) {
-                showError('Невозможно отправить сообщение');
-                return;
-            }
-            
-            xhr.open('POST', '/api/messages', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.timeout = 10000;
             
             xhr.onreadystatechange = function() {

@@ -218,8 +218,8 @@ module.exports = app;
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        console.log(`Сервер запущен на порту ${PORT}`);
-        console.log(`Откройте http://localhost:${PORT} в браузере`);
+        console.log('Сервер запущен на порту ' + PORT);
+        console.log('Откройте http://localhost:' + PORT + ' в браузере');
         
         if (TELEGRAM_TOKEN && TELEGRAM_CHAT_ID) {
             console.log('Telegram бот настроен и готов к работе');
