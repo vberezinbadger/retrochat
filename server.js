@@ -89,7 +89,17 @@ async function sendToTelegram(text) {
 // API для получения сообщений
 app.get('/api/messages', (req, res) => {
     const since = parseInt(req.query.since) || 0;
-    const recentMessages = messages.filter(msg => msg.timestamp > since);
+    const limit = parseInt(req.query.limit) || 50;
+    
+    let recentMessages;
+    if (since === 0) {
+        // При первом запросе отдаем последние сообщения
+        recentMessages = messages.slice(-limit);
+    } else {
+        // При последующих запросах отдаем новые сообщения
+        recentMessages = messages.filter(msg => msg.timestamp > since);
+    }
+    
     console.log(`📋 Запрос сообщений с ${since}, найдено: ${recentMessages.length}`);
     res.json(recentMessages);
 });

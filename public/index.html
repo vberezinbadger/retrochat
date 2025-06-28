@@ -2,100 +2,100 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.5, maximum-scale=2.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Простой веб-чат с мостом в Telegram, совместимый со старыми устройствами">
-    <meta name="keywords" content="чат, telegram, веб-чат, мобильный">
-    <meta name="robots" content="noindex, nofollow">
     
-    <!-- Поддержка старых браузеров -->
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- Основные мета-теги -->
+    <meta name="description" content="Простой веб-чат с мостом в Telegram">
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     
-    <!-- Иконки для мобильных устройств -->
+    <!-- Мобильные настройки -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <title>Веб-чат</title>
-    
-    <!-- Предзагрузка критичных ресурсов -->
-    <link rel="preload" href="style.css" as="style">
-    
     <link rel="stylesheet" href="style.css">
     
-    <!-- Fallback для очень старых браузеров -->
-    <noscript>
-        <style>
-            .screen { display: block !important; }
-            .hidden { display: none !important; }
-            #chatScreen { display: none !important; }
-            .no-js-message { 
-                padding: 20px; 
-                text-align: center; 
-                background: #fff3cd; 
-                border: 1px solid #ffeaa7; 
-                margin: 20px; 
-                border-radius: 4px; 
-            }
-        </style>
-        <div class="no-js-message">
-            <h2>JavaScript отключен</h2>
-            <p>Для работы чата необходимо включить JavaScript в вашем браузере.</p>
-        </div>
-    </noscript>
+    <!-- Детекция старых браузеров -->
+    <script>
+        // Простая детекция для добавления классов
+        (function() {
+            var ua = navigator.userAgent.toLowerCase();
+            if (ua.indexOf('opera mini') > -1) document.documentElement.className += ' opera-mini';
+            if (ua.indexOf('symbian') > -1) document.documentElement.className += ' symbian';
+            if (!document.querySelector) document.documentElement.className += ' legacy-mode';
+        })();
+    </script>
 </head>
 <body>
     <!-- Экран входа -->
     <div id="loginScreen" class="screen">
         <div class="container">
-            <h1>🌐 Веб-чат</h1>
-            <form id="loginForm" method="post" action="#">
+            <h1>💬 Веб-чат</h1>
+            <form id="loginForm">
                 <input 
                     type="text" 
                     id="nicknameInput" 
-                    name="nickname"
-                    placeholder="Введите ваш никнейм" 
+                    placeholder="Ваш никнейм" 
                     maxlength="20" 
-                    minlength="2"
-                    autocomplete="username"
-                    autocapitalize="words"
-                    spellcheck="false"
                     required
-                    aria-label="Никнейм пользователя"
+                    autocomplete="off"
+                    autocapitalize="words"
                 >
-                <button type="submit" aria-label="Войти в чат">
-                    📝 Войти в чат
+                <button type="submit">
+                    Войти в чат
                 </button>
             </form>
-            <div style="margin-top: 15px; font-size: 11px; color: #7f8c8d;">
-                Совместим со старыми устройствами
+            <div style="margin-top: 10px; font-size: 10px; color: #7f8c8d;">
+                Для старых устройств
             </div>
         </div>
     </div>
 
     <!-- Экран чата -->
     <div id="chatScreen" class="screen hidden">
-        <!-- Заголовок чата -->
-        <div class="chat-header" role="banner">
-            <span id="userNickname" aria-label="Текущий пользователь"></span>
-            <button 
-                id="logoutBtn" 
-                type="button"
-                aria-label="Выйти из чата"
-                title="Выйти из чата"
-            >
-                ❌ Выйти
-            </button>
+        <!-- Заголовок -->
+        <div class="chat-header">
+            <span id="userNickname"></span>
+            <button id="logoutBtn">Выход</button>
         </div>
         
-        <!-- Контейнер сообщений -->
-        <div 
-            id="messagesContainer" 
-            class="messages-container"
-            role="log"
-            aria-live="polite"
+        <!-- Сообщения -->
+        <div id="messagesContainer" class="messages-container">
+            <div id="messagesList" class="messages-list">
+                <!-- Сообщения будут добавляться здесь -->
+            </div>
+        </div>
+        
+        <!-- Ввод сообщения -->
+        <div class="chat-input">
+            <form id="messageForm">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Сообщение..." 
+                    maxlength="500"
+                    required
+                    autocomplete="off"
+                >
+                <button type="submit">📤</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    
+    <!-- Fallback для браузеров без JS -->
+    <noscript>
+        <div class="no-js-message">
+            <h2>Требуется JavaScript</h2>
+            <p>Включите JavaScript для работы чата.</p>
+        </div>
+    </noscript>
+</body>
+</html>
             aria-label="Сообщения чата"
         >
             <div id="messagesList" class="messages-list">

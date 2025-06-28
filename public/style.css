@@ -11,37 +11,69 @@ body {
     color: #333;
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 
 .screen {
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
     position: relative;
+    overflow: hidden;
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
+/* ФОРМА ВХОДА - убираем проблематичные трансформации */
 .container {
     width: 100%;
-    padding: 10px;
-    text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     max-width: 280px;
+    padding: 20px 10px;
+    text-align: center;
+    
+    /* Простое вертикальное центрирование для старых браузеров */
+    position: absolute;
+    top: 30%;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
 }
 
-/* Для очень маленьких экранов */
-@media screen and (max-width: 240px) {
+/* Альтернатива для очень старых браузеров */
+@media screen and (max-width: 240px), screen and (max-height: 320px) {
     .container {
         position: static;
-        transform: none;
-        margin-top: 20px;
-        max-width: none;
+        top: auto;
+        left: auto;
+        right: auto;
+        margin: 50px auto 0;
+        max-width: 95%;
+        padding: 10px 5px;
+    }
+    
+    body {
+        overflow: auto;
+    }
+    
+    .screen {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
+}
+
+/* Для устройств с очень маленькой высотой экрана */
+@media screen and (max-height: 240px) {
+    .container {
+        position: static;
+        margin: 10px auto;
         padding: 5px;
+    }
+    
+    h1 {
+        font-size: 14px;
+        margin-bottom: 10px;
     }
 }
 
@@ -49,6 +81,7 @@ h1 {
     margin-bottom: 20px;
     color: #2c3e50;
     font-size: 16px;
+    line-height: 1.2;
 }
 
 form {
@@ -58,67 +91,85 @@ form {
 
 input[type="text"] {
     width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #bdc3c7;
-    font-size: 12px;
+    padding: 12px 8px;
+    margin-bottom: 15px;
+    border: 2px solid #bdc3c7;
+    font-size: 14px;
+    background-color: #fff;
+    
+    /* Убираем стилизацию для старых браузеров */
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+    border-radius: 0;
+    
+    /* Улучшаем видимость на маленьких экранах */
+    line-height: 1.4;
 }
 
 input[type="text"]:focus {
     border-color: #3498db;
-    outline: none;
+    outline: 2px solid #3498db;
     background-color: #fff;
 }
 
 button {
     width: 100%;
-    padding: 10px;
+    padding: 12px 10px;
     background-color: #3498db;
     color: white;
     border: none;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: bold;
     cursor: pointer;
+    
+    /* Убираем стилизацию для старых браузеров */
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+    border-radius: 0;
+    
+    line-height: 1.2;
 }
 
 button:hover, button:focus {
     background-color: #2980b9;
+    outline: 2px solid #2980b9;
 }
 
 button:active {
     background-color: #1f4e79;
 }
 
+/* ЧАТЬ ИНТЕРФЕЙС */
 .chat-header {
     background-color: #34495e;
     color: white;
     padding: 8px;
     font-size: 11px;
     position: relative;
-    height: 32px;
+    height: 40px;
+    z-index: 100;
 }
 
 .chat-header span {
     position: absolute;
     left: 8px;
     top: 50%;
-    transform: translateY(-50%);
+    margin-top: -6px; /* Заменяем transform для старых браузеров */
+    font-weight: bold;
 }
 
 #logoutBtn {
     position: absolute;
     right: 8px;
-    top: 4px;
+    top: 8px;
     width: auto;
-    padding: 4px 8px;
+    padding: 6px 10px;
     font-size: 10px;
     background-color: #e74c3c;
     height: 24px;
+    border-radius: 0;
 }
 
 #logoutBtn:hover {
@@ -126,7 +177,7 @@ button:active {
 }
 
 .messages-container {
-    height: calc(100vh - 80px);
+    height: calc(100vh - 88px); /* 40px header + 48px input */
     overflow-y: auto;
     background-color: white;
     border-left: 1px solid #bdc3c7;
@@ -134,288 +185,203 @@ button:active {
     position: relative;
 }
 
-/* Для старых браузеров без calc */
+/* Фиксированная высота для старых браузеров */
 .messages-container {
-    height: 300px;
+    height: 250px;
+}
+
+@media screen and (min-height: 400px) {
+    .messages-container {
+        height: 300px;
+    }
+}
+
+@media screen and (min-height: 500px) {
+    .messages-container {
+        height: 400px;
+    }
 }
 
 .messages-list {
-    padding: 5px;
+    padding: 8px 5px;
     min-height: 100%;
 }
 
 .message {
-    margin-bottom: 8px;
-    padding: 6px;
+    margin-bottom: 10px;
+    padding: 8px;
     word-wrap: break-word;
-    font-size: 11px;
-    border-left: 3px solid #bdc3c7;
+    font-size: 12px;
+    border-left: 4px solid #bdc3c7;
     background-color: #f9f9f9;
+    clear: both;
 }
 
 .message.user {
     background-color: #e8f5e8;
     border-left-color: #27ae60;
-    text-align: right;
+    margin-left: 15%;
 }
 
 .message.telegram {
     background-color: #e3f2fd;
     border-left-color: #3498db;
+    margin-right: 15%;
 }
 
 .message-author {
     font-weight: bold;
-    font-size: 10px;
-    margin-bottom: 2px;
+    font-size: 11px;
+    margin-bottom: 3px;
     color: #2c3e50;
 }
 
 .message-text {
-    font-size: 11px;
-    line-height: 1.3;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 3px;
 }
 
 .message-time {
-    font-size: 9px;
+    font-size: 10px;
     color: #7f8c8d;
-    margin-top: 2px;
+    font-style: italic;
 }
 
+/* ПОЛЕ ВВОДА - фиксированное позиционирование */
 .chat-input {
     background-color: #ecf0f1;
-    padding: 5px;
+    padding: 8px;
     border: 1px solid #bdc3c7;
+    border-bottom: none;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     height: 48px;
+    z-index: 100;
 }
 
 .chat-input form {
     width: 100%;
-    height: 100%;
+    height: 32px;
     position: relative;
 }
 
 .chat-input input {
     position: absolute;
     left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: calc(100% - 60px);
+    top: 0;
+    width: 70%;
+    height: 32px;
     margin: 0;
-    padding: 6px;
-    height: 28px;
+    padding: 6px 8px;
+    border: 1px solid #bdc3c7;
+    font-size: 12px;
+    background-color: #fff;
+    border-radius: 0;
 }
 
 .chat-input button {
     position: absolute;
     right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 55px;
-    height: 28px;
+    top: 0;
+    width: 28%;
+    height: 32px;
     margin: 0;
     padding: 0;
-    font-size: 10px;
+    font-size: 11px;
+    border-radius: 0;
 }
 
-/* Дополнительные стили для очень старых браузеров */
-.chat-input input {
-    width: 70%;
-    float: left;
+/* Fallback для очень старых браузеров без position: fixed */
+.legacy-mode .chat-input {
+    position: static;
+    margin-top: 10px;
 }
 
-.chat-input button {
-    width: 28%;
-    float: right;
+.legacy-mode .messages-container {
+    height: 200px;
+    margin-bottom: 10px;
 }
 
-/* Очистка float */
-.chat-input form:after {
-    content: "";
-    display: table;
-    clear: both;
-}
-
-/* Адаптация для маленьких экранов */
-@media screen and (max-height: 320px) {
-    .messages-container {
-        height: 200px;
-    }
-    
-    .container {
-        margin-top: 10px;
-    }
-    
-    h1 {
-        font-size: 14px;
-        margin-bottom: 10px;
-    }
-}
-
+/* АДАПТАЦИЯ ДЛЯ МАЛЕНЬКИХ ЭКРАНОВ */
 @media screen and (max-width: 176px) {
     body {
         font-size: 10px;
     }
     
     .container {
-        padding: 3px;
+        padding: 5px 3px;
+        margin-top: 20px;
+    }
+    
+    h1 {
+        font-size: 12px;
+        margin-bottom: 8px;
     }
     
     input[type="text"], button {
-        padding: 6px;
+        padding: 8px 6px;
         font-size: 10px;
+        margin-bottom: 8px;
     }
     
     .chat-input {
         height: 40px;
+        padding: 4px;
+    }
+    
+    .chat-input form {
+        height: 32px;
     }
     
     .chat-input input, .chat-input button {
-        height: 24px;
+        height: 32px;
         font-size: 9px;
-    }
-}
-
-/* Фикс для Opera Mini */
-.opera-mini .messages-container {
-    height: 250px;
-    overflow: scroll;
-}
-
-.opera-mini .chat-input {
-    position: static;
-}
-
-/* Дополнительные стили для улучшенной совместимости */
-@media screen and (min-width: 321px) {
-    h1 {
-        margin-bottom: 15px;
-    }
-    
-    input[type="text"], button {
-        padding: 8px;
-        font-size: 12px;
-    }
-    
-    .chat-header {
-        padding: 6px 8px;
     }
     
     .message {
-        padding: 4px 6px;
+        padding: 6px;
+        font-size: 10px;
         margin-bottom: 6px;
     }
     
     .message-text {
-        font-size: 12px;
-    }
-    
-    .chat-input {
-        padding: 6px;
-    }
-    
-    .chat-input input {
-        width: 70%;
-        padding: 6px;
-        font-size: 12px;
-    }
-    
-    .chat-input button {
-        width: 30%;
-        padding: 6px 2px;
-        font-size: 11px;
+        font-size: 10px;
     }
 }
 
-/* Улучшения для старых браузеров */
-@media screen and (max-device-width: 320px) {
-    .message.user, .message.telegram {
-        margin-left: 5%;
-        margin-right: 5%;
-    }
+/* СПЕЦИАЛЬНЫЕ ФИКСЫ ДЛЯ СТАРЫХ БРАУЗЕРОВ */
+.opera-mini .messages-container,
+.symbian .messages-container {
+    height: 200px !important;
+    overflow: scroll !important;
+    position: static !important;
 }
 
-/* Режим для очень старых устройств */
-.legacy-mode {
-    font-size: 12px;
+.opera-mini .chat-input,
+.symbian .chat-input {
+    position: static !important;
+    margin-top: 5px;
 }
 
-.legacy-mode .container {
-    border: 1px solid #ccc;
-    border-radius: 0;
-    box-shadow: none;
+.opera-mini .container,
+.symbian .container {
+    position: static !important;
+    margin: 20px auto !important;
+    top: auto !important;
 }
 
-.legacy-mode button, 
-.legacy-mode input[type="text"] {
-    border-radius: 0;
-}
-
-.legacy-mode .message {
-    border-radius: 0;
-    border: 1px solid #ddd;
-}
-
-/* Скроллбар для старых браузеров */
-.messages-container {
-    scrollbar-width: thin;
-    scrollbar-color: #bdc3c7 #ecf0f1;
-}
-
-.messages-container::-webkit-scrollbar {
-    width: 8px;
-}
-
-.messages-container::-webkit-scrollbar-track {
-    background: #ecf0f1;
-}
-
-.messages-container::-webkit-scrollbar-thumb {
-    background: #bdc3c7;
-    border-radius: 4px;
-}
-
-.messages-container::-webkit-scrollbar-thumb:hover {
-    background: #95a5a6;
-}
-
-/* Загрузка */
+/* ДОПОЛНИТЕЛЬНЫЕ УТИЛИТЫ */
 .loading {
     text-align: center;
     padding: 20px;
     color: #7f8c8d;
     font-style: italic;
-}
-
-/* Анимация печатания */
-.typing-indicator {
-    padding: 8px;
-    color: #7f8c8d;
-    font-style: italic;
     font-size: 12px;
 }
 
-.typing-dots::after {
-    content: '...';
-    animation: typing 1.5s infinite;
-}
-
-@keyframes typing {
-    0%, 60% { content: '...'; }
-    20% { content: '.'; }
-    40% { content: '..'; }
-}
-
-/* Fallback для браузеров без анимации */
-.no-animation .typing-dots::after {
-    content: '...';
-}
-
-/* Индикаторы ошибок и статуса */
 .connection-error,
 .send-error {
     background-color: #f8d7da;
@@ -425,6 +391,39 @@ button:active {
     margin: 5px 0;
     font-size: 11px;
     text-align: center;
+}
+
+.send-error {
+    background-color: #fff3cd;
+    color: #856404;
+    border-color: #ffeaa7;
+}
+
+/* СКРОЛЛБАР */
+.messages-container::-webkit-scrollbar {
+    width: 12px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: #ecf0f1;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: #bdc3c7;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: #95a5a6;
+}
+
+/* NO-SCRIPT СТИЛИ */
+.no-js-message {
+    padding: 20px;
+    margin: 20px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    text-align: center;
+    color: #856404;
 }
 
 .send-error {

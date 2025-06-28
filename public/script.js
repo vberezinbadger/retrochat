@@ -7,6 +7,7 @@
     var isConnected = false;
     var retryCount = 0;
     var maxRetries = 5;
+    var isHistoryLoaded = false;
     
     // Детектор старых браузеров
     function detectOldBrowser() {
@@ -68,7 +69,7 @@
         
         var nickname = nicknameInput.value;
         if (nickname.replace) {
-            nickname = nickname.replace(/^\s+|\s+$/g, ''); // trim для старых браузеров
+            nickname = nickname.replace(/^\s+|\s+$/g, '');
         }
         
         if (nickname.length < 2) {
@@ -77,10 +78,13 @@
         }
         
         currentUser = nickname;
-        userNickname.innerHTML = nickname; // innerHTML вместо textContent
+        userNickname.innerHTML = nickname;
         
-        // Подключение к серверу
-        connectToServer();
+        // Очистить список сообщений
+        messagesList.innerHTML = '<div class="loading">⏳ Загрузка сообщений...</div>';
+        
+        // Загрузить историю сообщений
+        loadMessageHistory();
         
         // Переключение экранов
         loginScreen.className = 'screen hidden';
@@ -95,41 +99,74 @@
         return false;
     }
     
-    // Подключение к серверу
-    function connectToServer() {
-        // Для старых браузеров сразу используем polling
-        if (isOldBrowser || typeof WebSocket === 'undefined') {
-            pollMessages();
+    // Загрузка истории сообщений
+    function loadMessageHistory() {
+        var xhr = createXHR();
+        if (!xhr) {
+            startPolling();
             return;
         }
         
-        try {
-            socket = new WebSocket((window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host);
-            
-            socket.onopen = function() {
-                var joinMessage = JSON.stringify({
-                    type: 'join',
-                    nickname: currentUser
-                });
-                socket.send(joinMessage);
-            };
-            
-            socket.onmessage = function(event) {
-                var data = JSON.parse(event.data);
-                displayMessage(data);
-            };
-            
-            socket.onclose = function() {
-                setTimeout(connectToServer, 3000);
-            };
-            
-        } catch (error) {
-            pollMessages();
-        }
+        xhr.open('GET', '/api/messages?limit=20', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                var loadingElement = document.querySelector('.loading');
+                if (loadingElement && loadingElement.parentNode) {
+                    loadingElement.parentNode.removeChild(loadingElement);
+                }
+                
+                if (xhr.status === 200) {
+                    try {
+                        var messages = JSON.parse(xhr.responseText);
+                        console.log('📚 Загружена история:', messages.length, 'сообщений');
+                        
+                        for (var i = 0; i < messages.length; i++) {
+                            displayMessage(messages[i]);
+                            if (messages[i].timestamp > lastMessageTime) {
+                                lastMessageTime = messages[i].timestamp;
+                            }
+                        }
+                        
+                        isHistoryLoaded = true;
+                        isConnected = true;
+                        retryCount = 0;
+                        
+                        // Запустить polling для новых сообщений
+                        startPolling();
+                        
+                    } catch (e) {
+                        console.error('Ошибка парсинга истории:', e);
+                        showConnectionError();
+                        startPolling();
+                    }
+                } else {
+                    console.error('Ошибка загрузки истории:', xhr.status);
+                    showConnectionError();
+                    startPolling();
+                }
+            }
+        };
+        
+        xhr.onerror = function() {
+            var loadingElement = document.querySelector('.loading');
+            if (loadingElement && loadingElement.parentNode) {
+                loadingElement.parentNode.removeChild(loadingElement);
+            }
+            showConnectionError();
+            startPolling();
+        };
+        
+        xhr.send();
     }
     
-    // Альтернативный метод для старых браузеров
-    function pollMessages() {
+    // Подключение к серверу
+    function connectToServer() {
+        // Загрузить историю сообщений
+        loadMessageHistory();
+    }
+    
+    // Запуск polling
+    function startPolling() {
         if (pollInterval) {
             clearInterval(pollInterval);
         }
@@ -144,17 +181,25 @@
                     if (xhr.status === 200) {
                         try {
                             var messages = JSON.parse(xhr.responseText);
-                            console.log('📨 Получено сообщений:', messages.length);
                             
-                            for (var i = 0; i < messages.length; i++) {
-                                displayMessage(messages[i]);
-                                if (messages[i].timestamp > lastMessageTime) {
-                                    lastMessageTime = messages[i].timestamp;
+                            if (messages.length > 0) {
+                                console.log('📨 Получено новых сообщений:', messages.length);
+                                
+                                for (var i = 0; i < messages.length; i++) {
+                                    // Не показываем свои собственные сообщения повторно
+                                    if (!(messages[i].source === 'user' && messages[i].nickname === currentUser)) {
+                                        displayMessage(messages[i]);
+                                    }
+                                    
+                                    if (messages[i].timestamp > lastMessageTime) {
+                                        lastMessageTime = messages[i].timestamp;
+                                    }
                                 }
                             }
                             
                             isConnected = true;
                             retryCount = 0;
+                            
                         } catch (e) {
                             console.error('Ошибка парсинга сообщений:', e);
                         }
@@ -181,7 +226,12 @@
             };
             
             xhr.send();
-        }, 2000); // Уменьшил интервал для лучшей отзывчивости
+        }, 2000);
+    }
+    
+    // Альтернативный метод для старых браузеров
+    function pollMessages() {
+        startPolling();
     }
     
     // Показать ошибку соединения
@@ -241,29 +291,24 @@
             source: 'user'
         });
         
-        if (socket && socket.readyState === 1) { // WebSocket.OPEN = 1
-            socket.send(JSON.stringify({
-                type: 'message',
-                nickname: currentUser,
-                text: message,
-                timestamp: messageData.timestamp
-            }));
-        } else {
-            // Fallback через HTTP
-            var xhr = createXHR();
-            if (xhr) {
-                xhr.open('POST', '/api/messages', true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState === 4) {
-                        if (xhr.status !== 200) {
-                            console.error('Ошибка отправки сообщения:', xhr.status);
-                            showSendError();
-                        }
+        // Отправляем на сервер
+        var xhr = createXHR();
+        if (xhr) {
+            xhr.open('POST', '/api/messages', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        console.log('✅ Сообщение отправлено успешно');
+                        // Обновляем lastMessageTime чтобы не получить своё сообщение обратно
+                        lastMessageTime = messageData.timestamp;
+                    } else {
+                        console.error('Ошибка отправки сообщения:', xhr.status);
+                        showSendError();
                     }
-                };
-                xhr.send(JSON.stringify(messageData));
-            }
+                }
+            };
+            xhr.send(JSON.stringify(messageData));
         }
         
         messageInput.value = '';
@@ -334,6 +379,7 @@
         lastMessageTime = 0;
         isConnected = false;
         retryCount = 0;
+        isHistoryLoaded = false;
         
         chatScreen.className = 'screen hidden';
         loginScreen.className = 'screen';
